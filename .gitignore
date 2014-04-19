@@ -6,3 +6,94 @@
 
 # R data files from past sessions
 .Rdata
+
+rm(list = ls())
+
+setwd("C:/Users/USER/Desktop")
+load("Data Proyect.Rdata")
+
+LOCALIDADES$Cod_loc = 1:20
+LOCALIDADES$Cod_loc =   ifelse( nchar(LOCALIDADES$Cod_loc)==1,
+                                paste0("0",LOCALIDADES$Cod_loc),LOCALIDADES$Cod_loc)
+#Se pegan las bases de datos HOGARES  con VIVIENDAS y se le coloca el nombre hogaresviviendas
+hogaresviviendas = merge(HOGARES,VIVIENDAS)
+#Ahora se pega hogaresviviendas con la base de LOCALIDADES
+hogaresviviendas = merge(hogaresviviendas,LOCALIDADES)
+
+#Punto 1
+#Promedio y desviación estandar de los hogares que están en BOSA, USME y TUNJUELITO
+consulta1 = subset(hogaresviviendas,Cod_loc%in%c("05","06","07"))
+
+mean(consulta1$IngresoHog)
+sd(consulta1$IngresoHog)
+
+#Punto 2
+#las paredes de buena calidad  y cuyo estado del pisos sea bueno o regular, 
+#que además están en estratos menores al cuatro y que se encuentren
+#en las localidades de Chapinero (01) o Usaquen (02) y Teusaquillo (13). 
+
+viviendaslocalid = merge(LOCALIDADES,VIVIENDAS,all.y=T)
+consulta2 = subset(viviendaslocalid,(Estado_Paredes =="Bueno") & (Estado_Pisos %in% c("Bueno","Regular")) & ESTRATO<4 & (Cod_loc %in% c("01","02","13")))
+dim(consulta2)
+head(consulta2,n=7)
+     
+#Punto 2
+#b.  Genere una tabla con todos los hogares de la ciudad que no están ni en  la localidad de Ciudad Boli?var ni de Bosa y que ademÃ¡s estÃ©n en estrato dos y 
+#tienen una calidad buena en paredes y pisos. Escriba los seis primeros valores:
+                
+viviendaslocalid = merge(LOCALIDADES,VIVIENDAS,all.y=T)
+dim(viviendaslocalid)
+consulta3 = subset(viviendaslocalid,Estado_Paredes =="Bueno" & Estado_Pisos == "Bueno" & ESTRATO==2 & (Cod_loc !="07" & Cod_loc !="19"))
+dim(consulta3)
+head(consulta3,n=7)
+                   
+#Punto 3
+#a.  Calcule cuantos hogares tienen los servicios publicos, 
+#adicionalmente calcule el ingreso promedio y la desviación estandar,
+#desagregado por la variable tenencia de todos loss ervicio publicos. Presente la siguiente tabla
+
+library(tcltk)
+library(sqldf)
+punto3 = sqldf("select COBER_SP,count(*) as conteo, avg(IngresoHog) 
+                as 'prom',sqrt(variance(IngresoHog)) as 'sd_ing'
+                from hogaresviviendas group by COBER_SP ")
+na.omit(punto3)
+                   
+# Punto 4
+#Calcule el promedio del ingreso y la desviación estandar del ingreso
+#desagreagdo por estrato y tenencia de servicos públicos y 
+punt4 = sqldf("select ESTRATO,COBER_SP, avg(IngresoHog) 
+               as 'prom',sqrt(variance(IngresoHog)) as 'sd_ing'
+              from hogaresviviendas group by ESTRATO,COBER_SP ")                   
+na.omit(punt4)
+                   
+# Punto 5a
+#Calcule el promedio y la desviación estandar del ingreso
+#por el nombre de las localidades
+consulta5aa = aggregate(hogaresviviendas$IngresoHog,list(hogaresviviendas$Cod_loc),FUN=mean)
+names(consulta5aa) = c("Cod_loc","prom_ingr")
+                   
+consulta5ab = aggregate(hogaresviviendas$IngresoHog,list(hogaresviviendas$Cod_loc),FUN=sd)
+names(consulta5ab) = c("Cod_loc","sd_ing")
+                   
+consulta5a = merge(consulta5aa,consulta5ab)
+                   
+                   
+# Punto 5b
+#Calcule el promedio y la desviación estandar del ingreso
+#según el estado de los pisos
+consulta5ba = aggregate(hogaresviviendas$IngresoHog,list(hogaresviviendas$Estado_Pisos),FUN=mean)
+names(consulta5ba) = c("Estado_Pisos","prom_ingr")
+                   
+consulta5bb = aggregate(hogaresviviendas$IngresoHog,list(hogaresviviendas$Estado_Pisos),FUN=sd)
+names(consulta5bb) = c("Estado_Pisos","sd_ingr")
+                   
+consulta5b = merge(consulta5ba,consulta5bb)
+                   
+                   
+#6 Opcional
+#Presente el promedio del ingreso y la desviación estandar 
+#del ingreso por localidad y estrato
+punto6 = sqldf("select Nom_loc,ESTRATO,avg(IngresoHog) 'prom_ing',
+                sqrt(variance(IngresoHog)) as 'sd_ing'
+                from hogaresviviendas group by Nom_loc,ESTRATO")
